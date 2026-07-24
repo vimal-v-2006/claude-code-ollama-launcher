@@ -24,7 +24,7 @@ jobs:
       - name: Build release archive
         run: make release
       - name: Verify checksum
-        run: sha256sum -c dist/*.sha256
+        run: cd dist && sha256sum -c *.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: release-candidate
@@ -42,7 +42,7 @@ jobs:
       - name: Build release archive
         run: make release
       - name: Verify checksum
-        run: sha256sum -c dist/*.sha256
+        run: cd dist && sha256sum -c *.sha256
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:

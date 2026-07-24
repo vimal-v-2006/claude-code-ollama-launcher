@@ -8,7 +8,7 @@
 
    ```bash
    make release
-   sha256sum -c dist/*.sha256
+   (cd dist && sha256sum -c *.sha256)
    ```
 
 6. Stage the exact candidate and run `git diff --cached --check`.
