@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Claude Code Local Launcher
+Comment=Start Claude Code with Ollama or a llama.cpp endpoint
+Exec=@EXEC@
+Icon=claude-code-ollama-launcher
+Terminal=false
+Categories=Development;IDE;
+Keywords=Claude;Code;Ollama;Local;AI;Coding;
+StartupNotify=true
+StartupWMClass=io.github.claude_code_ollama_launcher

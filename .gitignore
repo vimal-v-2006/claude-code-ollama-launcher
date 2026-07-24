@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Build and release outputs
+build/
+dist/
+*.tar.gz
+*.sha256
+
+# Local settings and editor files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Test artifacts
+.coverage
+htmlcov/

@@ -1,0 +1,52 @@
+name: CI and Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install test prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y desktop-file-utils python3 python3-gi gir1.2-gtk-3.0 shellcheck
+      - name: Run checks
+        run: make test-all
+      - name: Build release archive
+        run: make release
+      - name: Verify checksum
+        run: sha256sum -c dist/*.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-candidate
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build release archive
+        run: make release
+      - name: Verify checksum
+        run: sha256sum -c dist/*.sha256
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/*.tar.gz
+            dist/*.sha256
