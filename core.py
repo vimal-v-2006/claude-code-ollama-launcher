@@ -6,24 +6,20 @@ from __future__ import annotations
 import json
 import os
 import re
+import tempfile
 import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
 
 APP_ID = "io.github.claude_code_ollama_launcher"
 APP_NAME = "Claude Code Local Launcher"
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 DEFAULT_BACKEND = "ollama"
 DEFAULT_MODEL = "qwen3.6:27b"
 DEFAULT_CONTEXT = 65536
 DEFAULT_CUSTOM_ENDPOINT = "http://127.0.0.1:8080"
-OLLAMA_URL = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip("/")
-SYSTEM_CONTEXT_CONFIG = Path(
-    os.environ.get(
-        "CLAUDE_CODE_OLLAMA_CONTEXT_CONFIG",
-        "/etc/systemd/system/ollama.service.d/90-claude-code-ollama-context.conf",
-    )
-)
+OLLAMA_URL = "http://127.0.0.1:11434"
+SYSTEM_CONTEXT_CONFIG = Path("/etc/systemd/system/ollama.service.d/90-claude-code-ollama-context.conf")
 SYSTEM_CONTEXT_HELPER = Path("/usr/local/libexec/claude-code-ollama-launcher/set-context")
 CONTEXT_CHOICES = {
     4096: "4K - light and fastest",
@@ -100,9 +96,7 @@ def save_settings(
     custom_endpoint = normalize_endpoint(custom_endpoint)
     destination = settings_path()
     destination.parent.mkdir(parents=True, exist_ok=True)
-    temporary = destination.with_suffix(".tmp")
-    temporary.write_text(
-        json.dumps(
+    payload = json.dumps(
             {
                 "backend": backend,
                 "model": model.strip(),
@@ -111,12 +105,21 @@ def save_settings(
                 "project": str(project),
             },
             indent=2,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    os.chmod(temporary, 0o600)
-    temporary.replace(destination)
+        ) + "\n"
+    descriptor, raw_temporary = tempfile.mkstemp(prefix=".settings-", dir=destination.parent)
+    temporary = Path(raw_temporary)
+    try:
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            descriptor = -1
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, destination)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        temporary.unlink(missing_ok=True)
 
 
 def current_context(config_path: Path = SYSTEM_CONTEXT_CONFIG) -> int | None:

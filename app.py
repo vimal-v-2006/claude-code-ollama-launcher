@@ -81,7 +81,7 @@ class Launcher(Gtk.Application):
         window = Gtk.ApplicationWindow(application=self)
         window.set_title(APP_NAME)
         window.set_default_size(640, 520)
-        window.set_resizable(False)
+        window.set_resizable(True)
         window.set_position(Gtk.WindowPosition.CENTER)
 
         css = Gtk.CssProvider()

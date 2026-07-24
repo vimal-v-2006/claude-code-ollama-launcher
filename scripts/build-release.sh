@@ -20,6 +20,11 @@ for item in source.iterdir():
         shutil.copytree(item, target, ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
     else:
         shutil.copy2(item, target)
+executables = {"app.py", "install.sh", "uninstall.sh", "run-claude-local", "set-context", "scripts/build-release.sh", "tests/test_install.sh", "tests/test_set_context.sh"}
+destination.chmod(0o755)
+for path in destination.rglob("*"):
+    relative = path.relative_to(destination).as_posix()
+    path.chmod(0o755 if path.is_dir() or relative in executables else 0o644)
 PY
 
 tar --sort=name --mtime='UTC 2020-01-01' --owner=0 --group=0 --numeric-owner -C "$STAGE" -czf "$DIST/$NAME.tar.gz" "$NAME"

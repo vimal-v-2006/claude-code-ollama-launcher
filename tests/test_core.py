@@ -60,6 +60,7 @@ class CoreTests(unittest.TestCase):
         self.assertFalse(core.local_model_ready("missing")[0])
 
     def test_command_is_argv_only_local_and_disables_web(self):
+        self.assertEqual(core.OLLAMA_URL, "http://127.0.0.1:11434")
         command = core.claude_command(Path("/tmp/project with spaces"), "qwen3.6:27b")
         self.assertEqual(command[0], "gnome-terminal")
         self.assertIn("OLLAMA_HOST=http://127.0.0.1:11434", command)
@@ -101,6 +102,17 @@ class CoreTests(unittest.TestCase):
                 self.assertEqual(loaded["backend"], "ollama")
                 self.assertEqual(Path(loaded["project"]), project)
                 self.assertEqual(core.settings_path().stat().st_mode & 0o777, 0o600)
+
+    def test_settings_write_ignores_predictable_symlink_temp(self):
+        with tempfile.TemporaryDirectory() as temp:
+            with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": temp}):
+                destination = core.settings_path()
+                destination.parent.mkdir(parents=True)
+                victim = Path(temp) / "victim"
+                victim.write_text("preserve me")
+                destination.with_suffix(".tmp").symlink_to(victim)
+                core.save_settings("test-model", 65536, Path(temp))
+                self.assertEqual(victim.read_text(), "preserve me")
 
     def test_rejects_invalid_settings(self):
         with tempfile.TemporaryDirectory() as temp:

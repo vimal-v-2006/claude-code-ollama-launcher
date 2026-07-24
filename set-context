@@ -1,5 +1,28 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -Eeuo pipefail
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+
+validate_existing_config() {
+  local candidate="$1" offset=0
+  local -a existing_lines
+  [[ -f "$candidate" && ! -L "$candidate" ]] || return 1
+  mapfile -t existing_lines < "$candidate"
+  if [[ "${existing_lines[0]:-}" == "# Managed by Claude Code Local Launcher" ]]; then
+    offset=1
+  fi
+  [[ ${#existing_lines[@]} -eq $((offset + 5)) ]] &&
+    [[ "${existing_lines[$offset]:-}" == "[Service]" ]] &&
+    [[ "${existing_lines[$((offset + 1))]:-}" =~ ^Environment=\"OLLAMA_CONTEXT_LENGTH=(4096|8192|16384|32768|65536|131072)\"$ ]] &&
+    [[ "${existing_lines[$((offset + 2))]:-}" == 'Environment="OLLAMA_FLASH_ATTENTION=1"' ]] &&
+    [[ "${existing_lines[$((offset + 3))]:-}" == 'Environment="OLLAMA_KV_CACHE_TYPE=q8_0"' ]] &&
+    [[ "${existing_lines[$((offset + 4))]:-}" == 'Environment="OLLAMA_KEEP_ALIVE=10m"' ]]
+}
+
+if [[ "${1:-}" == "--validate-config" && $# -eq 2 ]]; then
+  validate_existing_config "$2"
+  exit
+fi
 
 if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
   echo "This helper must run through pkexec or sudo." >&2
@@ -15,24 +38,35 @@ esac
 unit="ollama.service"
 dropin_dir="/etc/systemd/system/${unit}.d"
 config="${dropin_dir}/90-claude-code-ollama-context.conf"
-install -d -m 755 "$dropin_dir"
+/usr/bin/install -d -m 755 "$dropin_dir"
+if [[ -e "$config" && ! -f "$config" ]]; then
+  echo "Refusing non-regular Ollama context configuration: $config" >&2
+  exit 1
+fi
+if [[ -f "$config" ]]; then
+  if ! validate_existing_config "$config"; then
+    echo "Refusing to overwrite foreign Ollama configuration: $config" >&2
+    exit 1
+  fi
+fi
 temporary="$(mktemp "${dropin_dir}/.context.XXXXXX")"
 trap 'rm -f "$temporary"' EXIT
 cat > "$temporary" <<EOF
+# Managed by Claude Code Local Launcher
 [Service]
 Environment="OLLAMA_CONTEXT_LENGTH=$context"
 Environment="OLLAMA_FLASH_ATTENTION=1"
 Environment="OLLAMA_KV_CACHE_TYPE=q8_0"
 Environment="OLLAMA_KEEP_ALIVE=10m"
 EOF
-chmod 644 "$temporary"
-mv -f "$temporary" "$config"
+/usr/bin/chmod 644 "$temporary"
+/usr/bin/mv -f "$temporary" "$config"
 trap - EXIT
-systemctl daemon-reload
-systemctl restart "$unit"
+/usr/bin/systemctl daemon-reload
+/usr/bin/systemctl restart "$unit"
 
 for _ in $(seq 1 40); do
-  if curl -fsS --max-time 1 http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
+  if /usr/bin/curl -fsS --max-time 1 http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
     echo "Ollama context set to $context"
     exit 0
   fi

@@ -60,7 +60,7 @@ The launcher never downloads a model silently. The chosen model must already app
 ### 2. Download and verify the release
 
 ```bash
-VERSION=1.0.1
+VERSION=1.0.2
 BASE=https://github.com/vimal-v-2006/claude-code-ollama-launcher/releases/download/v${VERSION}
 curl -LO "$BASE/claude-code-ollama-launcher-${VERSION}.tar.gz"
 curl -LO "$BASE/claude-code-ollama-launcher-${VERSION}.tar.gz.sha256"
@@ -186,7 +186,9 @@ Remove saved preferences too:
 ./uninstall.sh --purge
 ```
 
-Keep the root context helper and current Ollama context configuration:
+By default, uninstall removes the verified root helper but preserves the active Ollama systemd context configuration so it never deletes service configuration it cannot conclusively own.
+
+Keep both the root context helper and current Ollama context configuration:
 
 ```bash
 ./uninstall.sh --keep-system-helper
