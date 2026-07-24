@@ -61,7 +61,7 @@ The launcher never downloads a model silently. The chosen model must already app
 
 ```bash
 VERSION=1.0.2
-BASE=https://github.com/vimal-v-2006/claude-code-ollama-launcher/releases/download/v${VERSION}
+BASE=https://github.com/vimal-v-2006/claude-code-local-launcher/releases/download/v${VERSION}
 curl -LO "$BASE/claude-code-ollama-launcher-${VERSION}.tar.gz"
 curl -LO "$BASE/claude-code-ollama-launcher-${VERSION}.tar.gz.sha256"
 sha256sum -c "claude-code-ollama-launcher-${VERSION}.tar.gz.sha256"
