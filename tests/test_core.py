@@ -38,7 +38,15 @@ class CoreTests(unittest.TestCase):
             self.assertEqual(core.current_context(path), 32768)
 
     def test_current_context_falls_back(self):
-        self.assertEqual(core.current_context(Path("/does/not/exist")), core.DEFAULT_CONTEXT)
+        self.assertIsNone(core.current_context(Path("/does/not/exist")))
+
+    def test_privileged_helper_path_cannot_be_overridden(self):
+        self.assertEqual(str(core.SYSTEM_CONTEXT_HELPER), "/usr/local/libexec/claude-code-ollama-launcher/set-context")
+        with tempfile.TemporaryDirectory() as temp:
+            fake = Path(temp) / "helper"
+            fake.write_text("#!/bin/sh\n")
+            fake.chmod(0o755)
+            self.assertFalse(core.trusted_context_helper(fake)[0])
 
     @mock.patch("core.json.load", side_effect=fake_json_load)
     @mock.patch("core.urllib.request.urlopen")

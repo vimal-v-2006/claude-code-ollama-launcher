@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-VERSION="1.0.0"
 SCRIPT_PATH="$(readlink -f -- "${BASH_SOURCE[0]}")"
 SOURCE_DIR="$(cd -- "$(dirname -- "$SCRIPT_PATH")" && pwd)"
+VERSION="$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import core; print(core.VERSION)' "$SOURCE_DIR")"
 NO_SYSTEM_HELPER=false
 
 for arg in "$@"; do
@@ -62,6 +62,12 @@ for destination in "$APP_DIR/app.py" "$APP_DIR/core.py" "$APP_DIR/run-claude-loc
   fi
 done
 
+if ! $NO_SYSTEM_HELPER; then
+  command -v pkexec >/dev/null || { echo "pkexec is required for context control" >&2; exit 1; }
+  pkexec install -d -m 755 "$SYSTEM_HELPER_DIR"
+  pkexec install -m 755 "$SOURCE_DIR/set-context" "$SYSTEM_HELPER"
+fi
+
 install -d -m 755 "$APP_DIR" "$BIN_DIR" "$APPLICATIONS_DIR" "$ICON_DIR"
 install -m 755 "$SOURCE_DIR/app.py" "$SOURCE_DIR/run-claude-local" "$SOURCE_DIR/uninstall.sh" "$SOURCE_DIR/set-context" "$APP_DIR/"
 install -m 644 "$SOURCE_DIR/core.py" "$APP_DIR/"
@@ -85,12 +91,6 @@ if command -v update-desktop-database >/dev/null; then
 fi
 if command -v gtk-update-icon-cache >/dev/null; then
   gtk-update-icon-cache -f -t "$DATA_HOME/icons/hicolor" >/dev/null 2>&1 || true
-fi
-
-if ! $NO_SYSTEM_HELPER; then
-  command -v pkexec >/dev/null || { echo "pkexec is required for context control" >&2; exit 1; }
-  pkexec install -d -m 755 "$SYSTEM_HELPER_DIR"
-  pkexec install -m 755 "$SOURCE_DIR/set-context" "$SYSTEM_HELPER"
 fi
 
 {

@@ -20,7 +20,7 @@ test -L "$TEMP/home/prefix/bin/claude-code-ollama-launcher"
 test -f "$TEMP/home/data/applications/claude-code-ollama-launcher.desktop"
 test -f "$TEMP/home/data/icons/hicolor/scalable/apps/claude-code-ollama-launcher.svg"
 HOME="$TEMP/home" XDG_DATA_HOME="$TEMP/home/data" XDG_CONFIG_HOME="$TEMP/home/config" PREFIX="$TEMP/home/prefix" \
-  "$TEMP/home/prefix/bin/claude-code-ollama-launcher" --version | grep -F '1.0.0'
+  "$TEMP/home/prefix/bin/claude-code-ollama-launcher" --version | grep -F 'Claude Code Local Launcher'
 desktop-file-validate "$TEMP/home/data/applications/claude-code-ollama-launcher.desktop"
 
 HOME="$TEMP/home" XDG_DATA_HOME="$TEMP/home/data" XDG_CONFIG_HOME="$TEMP/home/config" PREFIX="$TEMP/home/prefix" \

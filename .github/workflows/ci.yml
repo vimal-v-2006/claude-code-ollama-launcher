@@ -25,6 +25,11 @@ jobs:
         run: make release
       - name: Verify checksum
         run: cd dist && sha256sum -c *.sha256
+      - name: Test exact release archive
+        run: |
+          tmp=$(mktemp -d)
+          tar -xzf dist/*.tar.gz -C "$tmp"
+          make -C "$tmp"/* test-all
       - uses: actions/upload-artifact@v4
         with:
           name: release-candidate
@@ -39,6 +44,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      - name: Verify tag matches application version
+        run: test "$GITHUB_REF_NAME" = "v$(python3 -c 'import core; print(core.VERSION)')"
       - name: Build release archive
         run: make release
       - name: Verify checksum

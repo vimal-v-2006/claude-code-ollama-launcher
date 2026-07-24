@@ -2,6 +2,13 @@
 
 All notable changes are documented here.
 
+## [1.0.1] - 2026-07-24
+
+### Security
+
+- Fixed the privileged context-helper path to a root-owned system location and rejected symlinks or writable helper paths.
+- Made a missing Ollama context drop-in explicit so the selected default is applied on first launch.
+
 ## [1.0.0] - 2026-07-24
 
 ### Added

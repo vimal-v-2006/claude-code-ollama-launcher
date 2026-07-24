@@ -24,6 +24,7 @@ from core import (
     local_model_ready,
     ollama_models,
     save_settings,
+    trusted_context_helper,
 )
 
 
@@ -46,7 +47,7 @@ def self_test() -> int:
         "active_context": current_context(),
         "context_choices": list(CONTEXT_CHOICES),
         "context_helper": str(SYSTEM_CONTEXT_HELPER),
-        "context_helper_installed": SYSTEM_CONTEXT_HELPER.is_file(),
+        "context_helper_installed": trusted_context_helper()[0],
         "command": command,
     }
     print(json.dumps(result))
@@ -311,12 +312,14 @@ class Launcher(Gtk.Application):
         else:
             model = self.selected_model()
             ready, text = local_model_ready(model) if model else (False, "Choose a local model")
-            helper = "context control ready" if SYSTEM_CONTEXT_HELPER.is_file() else "context helper not installed"
-            self.status.set_text(f"● {text}  |  active context: {current_context() // 1024}K  |  {helper}")
+            active = current_context()
+            helper_ok, helper = trusted_context_helper()
+            active_text = f"{active // 1024}K" if active else "not configured"
+            self.status.set_text(f"● {text}  |  active context: {active_text}  |  {helper}")
         style = self.status.get_style_context()
         style.remove_class("status-ok")
         style.remove_class("status-bad")
-        helper_ready = self.selected_backend() == "custom" or SYSTEM_CONTEXT_HELPER.is_file()
+        helper_ready = self.selected_backend() == "custom" or trusted_context_helper()[0]
         style.add_class("status-ok" if ready and helper_ready else "status-bad")
 
     @staticmethod
@@ -336,7 +339,7 @@ class Launcher(Gtk.Application):
         project = Path(self.folder.get_filename() or default_projects_dir()).resolve()
         backend = self.selected_backend()
         model = self.selected_model()
-        context = int(self.context_choice.get_active_id() or current_context())
+        context = int(self.context_choice.get_active_id() or current_context() or 65536)
         endpoint = self.endpoint_entry.get_text()
         if backend == "custom":
             ready, message, endpoint_model = custom_endpoint_ready(endpoint)
@@ -348,8 +351,9 @@ class Launcher(Gtk.Application):
             return
         try:
             if backend == "ollama" and context != current_context():
-                if not SYSTEM_CONTEXT_HELPER.is_file():
-                    raise RuntimeError("The context helper is not installed. Run install.sh again without --no-system-helper.")
+                helper_ok, helper_message = trusted_context_helper()
+                if not helper_ok:
+                    raise RuntimeError(helper_message + ". Run install.sh again without --no-system-helper.")
                 subprocess.run(
                     ["pkexec", str(SYSTEM_CONTEXT_HELPER), str(context)],
                     check=True,

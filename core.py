@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 
 APP_ID = "io.github.claude_code_ollama_launcher"
 APP_NAME = "Claude Code Local Launcher"
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 DEFAULT_BACKEND = "ollama"
 DEFAULT_MODEL = "qwen3.6:27b"
 DEFAULT_CONTEXT = 65536
@@ -24,12 +24,7 @@ SYSTEM_CONTEXT_CONFIG = Path(
         "/etc/systemd/system/ollama.service.d/90-claude-code-ollama-context.conf",
     )
 )
-SYSTEM_CONTEXT_HELPER = Path(
-    os.environ.get(
-        "CLAUDE_CODE_OLLAMA_CONTEXT_HELPER",
-        "/usr/local/libexec/claude-code-ollama-launcher/set-context",
-    )
-)
+SYSTEM_CONTEXT_HELPER = Path("/usr/local/libexec/claude-code-ollama-launcher/set-context")
 CONTEXT_CHOICES = {
     4096: "4K - light and fastest",
     8192: "8K - small tasks",
@@ -124,14 +119,33 @@ def save_settings(
     temporary.replace(destination)
 
 
-def current_context(config_path: Path = SYSTEM_CONTEXT_CONFIG) -> int:
+def current_context(config_path: Path = SYSTEM_CONTEXT_CONFIG) -> int | None:
     try:
         match = re.search(r"OLLAMA_CONTEXT_LENGTH=(\d+)", config_path.read_text(encoding="utf-8"))
         if match:
             return int(match.group(1))
     except OSError:
         pass
-    return DEFAULT_CONTEXT
+    return None
+
+
+def trusted_context_helper(path: Path = SYSTEM_CONTEXT_HELPER) -> tuple[bool, str]:
+    """Require a fixed, root-owned, non-symlink, non-writable privilege boundary."""
+    if path != SYSTEM_CONTEXT_HELPER:
+        return False, "Context helper path is not the fixed system path"
+    try:
+        if path.is_symlink() or not path.is_file():
+            return False, "Context helper is missing or is a symlink"
+        stat = path.stat()
+        if stat.st_uid != 0 or stat.st_mode & 0o022:
+            return False, "Context helper must be root-owned and not group/other writable"
+        for parent in (path.parent, path.parent.parent):
+            parent_stat = parent.stat()
+            if parent.is_symlink() or parent_stat.st_uid != 0 or parent_stat.st_mode & 0o022:
+                return False, f"Untrusted helper directory: {parent}"
+    except OSError as exc:
+        return False, str(exc)
+    return True, "context control ready"
 
 
 def ollama_models(timeout: float = 2.0) -> list[str]:
